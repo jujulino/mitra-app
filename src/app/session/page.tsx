@@ -256,7 +256,7 @@ export default function SessionPage() {
 
       {/* Avatar */}
       <div className="flex flex-col items-center py-2">
-        <div className={speaking ? "animate-bounce" : ""}>
+        <div>
           <Avatar style={avatarStyle as any} expression={expression} size="lg" speaking={speaking} />
         </div>
         {avatarCaption && (

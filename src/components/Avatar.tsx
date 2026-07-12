@@ -22,7 +22,7 @@ function Eyes({ expression, accent, celebrating }: { expression: AvatarExpressio
   const r = big ? 5.5 : 4;
 
   return (
-    <>
+    <g className="mitra-eyes">
       {/* Left eye */}
       {happy ? (
         <path d={`M 32 37 Q 38 ${big ? 32 : 34} 44 37`} stroke={accent} strokeWidth={2.5} fill="none" strokeLinecap="round" />
@@ -41,11 +41,15 @@ function Eyes({ expression, accent, celebrating }: { expression: AvatarExpressio
           <circle cx={60} cy={36} r={2} fill="white" />
         </>
       )}
-    </>
+    </g>
   );
 }
 
-function Mouth({ expression, accent }: { expression: AvatarExpression; accent: string }) {
+function Mouth({ expression, accent, speaking }: { expression: AvatarExpression; accent: string; speaking?: boolean }) {
+  // While speaking, show an animated talking mouth regardless of expression.
+  if (speaking) {
+    return <ellipse className="mitra-mouth is-talking" cx={50} cy={57} rx={6} ry={7} fill={accent} />;
+  }
   switch (expression) {
     case "happy":
     case "celebrating":
@@ -233,7 +237,7 @@ function Accessory({ type, expression, colors }: { type: string; expression: Ava
   }
 }
 
-function AvatarSvg({ style, expression, colors }: { style: string; expression: AvatarExpression; colors: Colors }) {
+function AvatarSvg({ style, expression, colors, speaking }: { style: string; expression: AvatarExpression; colors: Colors; speaking?: boolean }) {
   const isRobot = style === "robot";
   const isAstronaut = style === "astronaut";
   const isDino = style === "dinosaur" || style === "dragon";
@@ -266,7 +270,7 @@ function AvatarSvg({ style, expression, colors }: { style: string; expression: A
       {style === "dog" && <ellipse cx={50} cy={46} rx={6} ry={4} fill={colors.accent} />}
       {/* Eyes & mouth */}
       <Eyes expression={expression} accent={colors.accent} celebrating={celebrating} />
-      <Mouth expression={expression} accent={colors.accent} />
+      <Mouth expression={expression} accent={colors.accent} speaking={speaking} />
       <Cheeks show={expression === "happy" || celebrating} />
       {/* Celebration sparkles */}
       {celebrating && (
@@ -296,16 +300,13 @@ function AvatarSvg({ style, expression, colors }: { style: string; expression: A
 export default function Avatar({ style, expression, size = "md", speaking }: AvatarProps) {
   const colors = getColors(style);
   const sizeClasses = { sm: "w-16 h-16", md: "w-24 h-24", lg: "w-36 h-36" };
+  const celebrating = expression === "celebrating";
 
   return (
-    <div
-      className={`${sizeClasses[size]} transition-all duration-300 ${
-        speaking ? "animate-bounce" : ""
-      } ${
-        expression === "celebrating" ? "animate-pulse scale-110" : ""
-      }`}
-    >
-      <AvatarSvg style={style} expression={expression} colors={colors} />
+    <div className={`${sizeClasses[size]} transition-transform duration-300 ${celebrating ? "scale-110" : "scale-100"}`}>
+      <div className={`mitra-avatar ${speaking ? "is-speaking" : ""}`}>
+        <AvatarSvg style={style} expression={expression} colors={colors} speaking={speaking} />
+      </div>
     </div>
   );
 }

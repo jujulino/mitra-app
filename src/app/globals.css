@@ -24,3 +24,53 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ===== Mitra avatar: make it feel alive ===== */
+/* Gentle idle breathing — always on, so the avatar is never frozen. */
+@keyframes mitra-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+/* Soft vertical bob while talking (replaces the harsh full-body bounce). */
+@keyframes mitra-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5%); }
+}
+/* Natural blink every few seconds. */
+@keyframes mitra-blink {
+  0%, 91%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.12); }
+}
+/* Mouth flap while speaking. */
+@keyframes mitra-talk {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+
+.mitra-avatar {
+  transform-origin: center;
+  animation: mitra-breathe 3.6s ease-in-out infinite;
+}
+.mitra-avatar.is-speaking {
+  animation: mitra-bob 0.5s ease-in-out infinite;
+}
+.mitra-eyes,
+.mitra-mouth {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.mitra-eyes {
+  animation: mitra-blink 4.8s ease-in-out infinite;
+}
+.mitra-mouth.is-talking {
+  animation: mitra-talk 0.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mitra-avatar,
+  .mitra-avatar.is-speaking,
+  .mitra-eyes,
+  .mitra-mouth.is-talking {
+    animation: none;
+  }
+}

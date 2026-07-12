@@ -97,30 +97,69 @@ function playAudioUrl(url: string): Promise<void> {
   });
 }
 
-function browserSpeak(text: string): Promise<void> {
+// Score a voice for warmth/naturalness. Higher = better.
+function scoreVoice(v: SpeechSynthesisVoice): number {
+  const n = v.name.toLowerCase();
+  let s = 0;
+  if (n.includes("natural")) s += 12; // e.g. "Microsoft Aria Online (Natural)"
+  if (n.includes("google")) s += 7; // Chrome's Google voices
+  if (n.includes("aria") || n.includes("jenny") || n.includes("maya") || n.includes("libby") || n.includes("sonia")) s += 9;
+  if (n.includes("samantha")) s += 6; // macOS/iOS
+  if (n.includes("zira")) s += 3; // Windows fallback
+  if (v.lang === "en-US") s += 2;
+  else if (v.lang.startsWith("en")) s += 1;
+  return s;
+}
+
+// Voices load async on most browsers; wait up to 800ms so we pick a good one
+// instead of falling back to the default (often the most robotic) voice.
+function loadVoices(): Promise<SpeechSynthesisVoice[]> {
   return new Promise((resolve) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      resolve();
+      resolve([]);
       return;
     }
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(
-      (v) =>
-        v.lang.startsWith("en") &&
-        (v.name.toLowerCase().includes("samantha") ||
-          v.name.toLowerCase().includes("victoria") ||
-          v.name.toLowerCase().includes("zira"))
-    );
-    const english = voices.find((v) => v.lang.startsWith("en-"));
-    utterance.voice = preferred || english || null;
-    utterance.rate = 0.85;
-    utterance.pitch = 1.15;
-    utterance.onend = () => resolve();
-    utterance.onerror = () => resolve();
-    window.speechSynthesis.speak(utterance);
+    const synth = window.speechSynthesis;
+    const cur = synth.getVoices();
+    if (cur.length) {
+      resolve(cur);
+      return;
+    }
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      synth.removeEventListener("voiceschanged", finish);
+      resolve(synth.getVoices());
+    };
+    synth.addEventListener("voiceschanged", finish);
+    setTimeout(finish, 800);
   });
+}
+
+function pickVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+  if (!voices.length) return null;
+  const en = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith("en"));
+  const pool = en.length ? en : voices;
+  return pool.reduce((best, v) => (scoreVoice(v) > scoreVoice(best) ? v : best), pool[0]);
+}
+
+function browserSpeak(text: string): Promise<void> {
+  return (async () => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const voices = await loadVoices();
+    await new Promise<void>((resolve) => {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      const voice = pickVoice(voices);
+      if (voice) utterance.voice = voice;
+      utterance.rate = 0.82; // slightly slower = warmer, easier to follow
+      utterance.pitch = 1.12;
+      utterance.onend = () => resolve();
+      utterance.onerror = () => resolve();
+      window.speechSynthesis.speak(utterance);
+    });
+  })();
 }
 
 // Main speak function: tries ElevenLabs first, falls back to browser
